@@ -1,7 +1,7 @@
-﻿#Creator: Sean Berry-Pavaday
-#Version 2.0
+﻿# Creator: Bang Em
+# Version: 2.1
 
-#Converts MKV files into MP4 and deletes the original MKV once conversion is complete.
+# Converts MKV files into MP4 and deletes the original MKV once conversion is complete.
 #====================================================================================================================
 
 param (
@@ -11,18 +11,36 @@ param (
     [string]$outputDir = "E:\01-Gameplay Editing"
 )
 
+# Validate FFmpeg executable path
+if (-not (Test-Path $ffmpegPath -PathType Leaf)) {
+    Write-Error "FFmpeg executable not found at path: $ffmpegPath"
+    return
+}
+
 # Validate and create the output directory if it doesn't exist
 if (-not (Test-Path $outputDir)) {
     New-Item -ItemType Directory -Path $outputDir | Out-Null
 }
 
-# Get a list of all the MKV files in the first input directory
+# Function to execute FFmpeg command
+function ConvertToMp4($inputFile, $outputFile) {
+    # Increase the video bitrate (e.g., 8000k) and audio bitrate (e.g., 320k) for higher quality
+    $ffmpegArgs = @(
+        "-i", $inputFile,
+        "-c:v", "libx264",
+        "-b:v", "100000k",  # Set the video bitrate (adjust as needed)
+        "-preset", "fast",
+        "-c:a", "aac",
+        "-b:a", "320k",   # Set the audio bitrate (adjust as needed)
+        "-strict", "experimental",
+        $outputFile
+    )
+    & $ffmpegPath @ffmpegArgs
+}
+
+# Get a list of all the MKV files in the input directories
 $mkvFiles1 = Get-ChildItem -Path $inputDir1 -Filter "*.mkv" -Force
-
-# Get a list of all the MKV files in the second input directory
 $mkvFiles2 = Get-ChildItem -Path $inputDir2 -Filter "*.mkv" -Force
-
-# Combine the two lists of MKV files
 $mkvFiles = @($mkvFiles1) + @($mkvFiles2)
 
 # Initialize a counter for successful conversions
@@ -45,27 +63,34 @@ foreach ($mkvFile in $mkvFiles) {
 
         # Check if the output file already exists
         if (Test-Path $outputFile) {
-            Write-Host "Output file $outputFile already exists. Skipping conversion." -ForegroundColor Yellow
+            Write-Warning "Output file $outputFile already exists. Skipping conversion."
             continue
         }
 
         # Remux the MKV file into MP4 using FFmpeg
-        & $ffmpegPath -i $inputFile -c copy $outputFile
+        ConvertToMp4 $inputFile $outputFile
 
         # Delete the original MKV file
-        Remove-Item $inputFile
+        #Remove-Item $inputFile -Force
 
         # Increment the success counter
         $successCount++
+
+        # If verbose mode is enabled, write conversion details to verbose output
+        if ($PSBoundParameters["Verbose"]) {
+            Write-Verbose "Converted: $inputFile => $outputFile"
+        }
     }
     catch {
         # Add the error message to the array
-        $errors += "Error converting file: $mkvFile`nError: $_"
+        $errorMessage = "Error converting file: $mkvFile`nError: $_"
+        Write-Error $errorMessage
+        $errors += $errorMessage
     }
 }
 
 # Log the conversion summary
-Write-Host "Conversion completed." -ForegroundColor Green
+Write-Host "Conversion completed."
 Write-Host "Successful conversions: $successCount"
 Write-Host "Failed conversions: $($errors.Count)"
 
