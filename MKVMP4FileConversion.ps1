@@ -1,4 +1,4 @@
-#Creator: Sean Berry-Pavaday
+﻿#Creator: Sean Berry-Pavaday
 #Version 2.0
 
 #Converts MKV files into MP4 and deletes the original MKV once conversion is complete.
