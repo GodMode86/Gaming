@@ -29,7 +29,7 @@ function ConvertToMp4($inputFile, $outputFile) {
         "-i", $inputFile,
         "-c:v", "libx264",
         "-b:v", "100000k",  # Set the video bitrate (adjust as needed)
-        "-preset", "medium",
+        "-preset", "veryfast",
         "-c:a", "aac",
         "-b:a", "320k",   # Set the audio bitrate (adjust as needed)
         "-strict", "experimental",
